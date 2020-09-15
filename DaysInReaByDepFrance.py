@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """
-Created on Mon Jun  1 16:28:24 2020
+Created on Mon Sep  13 16:28:24 2020
 
 @author: Pierre
 """
@@ -19,7 +19,7 @@ hospFile = "donnees-hospitalieres-covid19-2020-09-14-19h00.csv"
 
 
 ######################################################################################
-# I - create newHosp, newRea, newReaOut, newRad, newDc data file
+# I - create newHosp, newRea, newReaOut, newRad, newDc Tidy data dataframe/file
 ######################################################################################
 
 ###############################################################
@@ -29,20 +29,20 @@ hospFile = "donnees-hospitalieres-covid19-2020-09-14-19h00.csv"
 #Import file with necessary variables
 df = pd.read_csv(sursaudFile, sep=";" ,  
                          usecols= ["dep","date_de_passage","sursaud_cl_age_corona", "nbre_hospit_corona"],
+                         dtype={"dep": str},  #force dep to string
                          parse_dates= ["date_de_passage"])
 df.dtypes
 
 df.rename(columns={"date_de_passage": "day" }, inplace=True)
-df["nbre_hospit_corona"] = df["nbre_hospit_corona"].fillna(0)  #remove NaN
-df['dep']= df['dep'].astype(str)  #force dep to string
+df["nbre_hospit_corona"] = df["nbre_hospit_corona"].fillna(0)  #replace NaN by 0
+#df['dep'].astype(str)  #force dep to string #done in import
 df['dep'] = df['dep'].str.strip() #strip white spaces
 #select only global data 
 df = df.loc[df['sursaud_cl_age_corona'] == '0']
-#remove age classe columln
+#remove age classe column
 dfUrgences = df.drop(columns=['sursaud_cl_age_corona'])
 
-#Normally sorted but force it
-#dfUrgences.sort_values(['dep', 'day'], ascending=[True, True],inplace=True)
+
 #Reindex
 dfUrgences.reset_index(inplace=True, drop=True)  #reset index
 
@@ -72,27 +72,25 @@ for index, row in dfUrgences.iterrows():
     previousCumul = row['nbre_hospit_corona'] + previousCumul
     print("previousCumul:", previousCumul)
     
-    
-#Normally sorted but force it
-#dfUrgences.sort_values(['dep', 'day'], ascending=[True, True],inplace=True)
-#Reindex
-#dfUrgences.reset_index(inplace=True, drop=True)  #reset index
-
-dfUrgences.to_excel("Urgences.xlsx", sheet_name='Urgences', index=True)    
-
-
+#Save Urgences data if needed
+#dfUrgences.to_excel("Urgences.xlsx", sheet_name='Urgences', index=True)    
 dfUrgences.dtypes
+
+
+
+
 ###############################################################
 # Read Hospitalizations  file :
 # i.e donnnees-hospitalieres-covid19-YYYY-MM-DD-19h00.csv
 ###############################################################
 df = pd.read_csv(hospFile, sep=";" ,  
                          usecols= ["dep","sexe", "jour","hosp", "rea", "rad", "dc"],
+                         dtype={"dep": str},
                          parse_dates= ["jour"])
 df.dtypes
 
 df.rename(columns={"jour": "day" }, inplace=True)
-df['dep'].astype(str)  #force dep to string
+#df['dep'].astype(str)  #force dep to string #done in import
 df['dep'] = df['dep'].str.strip() #strip white spaces
 #select global data 
 df = df.loc[df['sexe'] == 0]
@@ -126,14 +124,10 @@ for index, row in dfHospitalizations.iterrows():
     previousDep = row['dep']
     print("previousCumul:", previousCumul)
 
-
-
-
-
-#dfHospitalizations["hospCumul"]  = dfHospitalizations["hosp"]+dfHospitalizations["rad"]+dfHospitalizations["dc"]
+#save hospitalizations if needed
+#dfHospitalizations.to_excel("Hospitalizations.xlsx", sheet_name='Hospitalizations.xlsx', index=True)  
 dfHospitalizations.dtypes
 
-dfHospitalizations.to_excel("Hospitalizations.xlsx", sheet_name='Hospitalizations.xlsx', index=True)  
 
 ######################################################################
 #  Merge Urgences and Hospitalizations based on Departements and days 
@@ -403,19 +397,14 @@ dfUrgHosp.sort_values(by=['dep', 'day'], ascending=[True, True],  inplace=True)
 #Reindex
 dfUrgHosp.reset_index(inplace=True, drop=True)  #reset index  
 
-
-
+#initialize
 previousDep = "00"
 dfUrgHosp['hospDRecSum'] = 0.0
 dfUrgHosp['reaDRecSum'] = 0.0
-
-
 previousHospDRecSum = 0.0
 previousReaDRecSum  = 0.0
 
-
-#calculate .
-
+#calculate 
 for index, row in dfUrgHosp.iterrows():
     print("index:", index)
     print("dep:", row['dep'])
@@ -438,10 +427,6 @@ for index, row in dfUrgHosp.iterrows():
     print(" previousreaDRecSum:", previousReaDRecSum)
 
 
-
-
-
-
 ##########################################################################################
 # Calculate reaDRecSum_hospDRecSum_factor  using an apply
 ##########################################################################################
@@ -450,11 +435,8 @@ for index, row in dfUrgHosp.iterrows():
 dfUrgHosp.sort_values(by=['dep', 'day'], ascending=[True, True],  inplace=True)
 #Reindex
 dfUrgHosp.reset_index(inplace=True, drop=True)  #reset index  
-
+#calculate using an apply
 dfUrgHosp['reaDRecSum_hospDRecSum_factor']  = dfUrgHosp.apply(lambda x: nonZeroYbyX(dfUrgHosp.loc[index, 'hospDRecSum'],dfUrgHosp.loc[index, 'reaDRecSum']), axis=1)  
-
-
-
 
     
 ##########################################################################################
@@ -467,14 +449,12 @@ dfUrgHosp.sort_values(by=['dep', 'day'], ascending=[True, True],  inplace=True)
 #Reindex
 dfUrgHosp.reset_index(inplace=True, drop=True)  #reset index  
 
-
+#uinitialize
 previousDep = "00"
-
 dfUrgHosp['reaCumulRec'] = 0.0
 previousReaCumulRec  = 0.0
 
 #calculate .
-
 for index, row in dfUrgHosp.iterrows():
     print("index:", index)
     print("dep:", row['dep'])
@@ -498,6 +478,7 @@ for index, row in dfUrgHosp.iterrows():
 # except for newReaOut = max(0, Previous ReaDRec - current ReaDrec)
 ###################################################################################################
 
+#initialize columns
 dfUrgHosp['newHosp'] = 0.0
 dfUrgHosp['newRea'] = 0.0
 dfUrgHosp['newReaOut'] = 0.0
@@ -512,8 +493,7 @@ previousReaDRec  = 0.0   #for newReaOut
 previousRadCumulRec  = 0.0
 previousDcCumulRec  = 0.0
 
-
-
+#calculate
 for index, row in dfUrgHosp.iterrows():
     #print("index:", index)
     #print("dep:", row['dep'])
@@ -548,12 +528,8 @@ for index, row in dfUrgHosp.iterrows():
 
 
 #####################################################################
-# Save in Excel to check
+# Save in Excel to check, if needed
 #####################################################################
-
-#dfUrgHospToSave = dfUrgHosp.copy()
-
-
 #Resort it  day ascending
 dfUrgHosp.sort_values(by=['dep', 'day'], ascending=[True, True],  inplace=True)
 #Reindex
@@ -565,7 +541,6 @@ dfUrgHosp.to_excel("dfUrgHosp.xlsx", sheet_name='UrgHosp', index=True)
 # II - calculate number of days in Rea
 ##################################################################################
 
-
 ##############################################################################
 #  Read file with newHosp, newRea , newReaOut, newRad, newDc data
 ##############################################################################
@@ -576,28 +551,25 @@ dfNewHosp = pd.read_excel("dfUrgHosp.xlsx", sheet_name='UrgHosp', usecols=["dep"
 dfNewHosp.dtypes
 
 
-maxSamples = 100 #number of samples.
+maxSamples = 100 #number of samples 100 is very good, 20 is enough
 
 column_names = ["numSample", "dep", "dayInReaNZMean", "countDayInReaNZ", "DaysInReaSampleWMean"]
 dfAllDepDaysInRea = pd.DataFrame(columns = column_names)
 
-
-
 for numSample in range(0,maxSamples) :
         
-    
     print("numSample:", numSample)
     
-    #Create a cohorte :  one row for each hospitalization
+    #Create a Tidy Data Data Frame :  one row for each hospitalization
     
     column_names = ["dep", "dayHosp", "dayRea", "dayReaOut", "dayDc", "dayRad", "closed"]
-    dfCohorteHosp = pd.DataFrame(columns = column_names)
-    #dfCohorteHosp.dtypes
+    dfTidyHosp = pd.DataFrame(columns = column_names)
+    #dfTidyHosp.dtypes
     #Normally sorted but force it
-    dfNewHosp.sort_values(['dep', 'day'], ascending=[True, True])
+    dfNewHosp.sort_values(['dep', 'day'], ascending=[True, True],  inplace=True)
     
     #dfNewHosp.dtypes
-    #First Create the Cohorte hosp dataframe
+    #First Create the Tidy rows from new hospitalizations
     #Add new rows for new days
     for index, row in dfNewHosp.iterrows():
         #print("index:",index)
@@ -605,21 +577,21 @@ for numSample in range(0,maxSamples) :
         if row['newHosp']>0:
             #print("dep", row["dep"])
             #print("jour", row["day"])
-            dfOneCohorteHosp = pd.DataFrame({"dep" : [row["dep"]],
+            dfOneTidyHosp = pd.DataFrame({"dep" : [row["dep"]],
                                              "dayHosp" : [row["day"]], 
                                              "dayRea" : datetime(1970, 1, 1, 0, 0, 0),
                                              "dayReaOut" : datetime(1970, 1, 1, 0, 0, 0),
                                              "dayDc" : datetime(1970, 1, 1, 0, 0, 0),
                                              "dayRad" : datetime(1970, 1, 1, 0, 0, 0),
-                                             "closed": False}) #New work cohorte
+                                             "closed": False}) #New work Tidy
             
             #☺Splits Rows
             if row['newHosp']>1:    
-                dfOneCohorteHosp = dfOneCohorteHosp.loc[dfOneCohorteHosp.index.repeat(row['newHosp'])] 
-                dfOneCohorteHosp.reset_index(inplace=True, drop=True)  #reset index
-            dfCohorteHosp = pd.concat([dfCohorteHosp,dfOneCohorteHosp])  #new rows
-            #reset index for global cohorte hosp 
-            dfCohorteHosp.reset_index(inplace=True, drop=True)  #reset index
+                dfOneTidyHosp = dfOneTidyHosp.loc[dfOneTidyHosp.index.repeat(row['newHosp'])] 
+                dfOneTidyHosp.reset_index(inplace=True, drop=True)  #reset index
+            dfTidyHosp = pd.concat([dfTidyHosp,dfOneTidyHosp])  #new rows
+            #reset index for global Tidy hosp dataframe
+            dfTidyHosp.reset_index(inplace=True, drop=True)  #reset index
             
     
             #############################################################
@@ -629,18 +601,18 @@ for numSample in range(0,maxSamples) :
                 for i in range(0,int(row['newRea'])) :
                     #print("i rea:",i)
                     #select not in rea 
-                    dfCohorteIndex =  dfCohorteHosp.loc [ (dfCohorteHosp["dep"] == row["dep"]) & 
-                                                         (dfCohorteHosp["dayRea"] == datetime(1970, 1, 1, 0, 0, 0)) & 
-                                                         (dfCohorteHosp["dayReaOut"] == datetime(1970, 1, 1, 0, 0, 0)) & 
-                                                         (dfCohorteHosp["dayDc"] == datetime(1970, 1, 1, 0, 0, 0)) & 
-                                                         (dfCohorteHosp["dayRad"] == datetime(1970, 1, 1, 0, 0, 0)) & 
-                                                         (dfCohorteHosp["closed"] == False)  ]
+                    dfTidyIndex =  dfTidyHosp.loc [ (dfTidyHosp["dep"] == row["dep"]) & 
+                                                         (dfTidyHosp["dayRea"] == datetime(1970, 1, 1, 0, 0, 0)) & 
+                                                         (dfTidyHosp["dayReaOut"] == datetime(1970, 1, 1, 0, 0, 0)) & 
+                                                         (dfTidyHosp["dayDc"] == datetime(1970, 1, 1, 0, 0, 0)) & 
+                                                         (dfTidyHosp["dayRad"] == datetime(1970, 1, 1, 0, 0, 0)) & 
+                                                         (dfTidyHosp["closed"] == False)  ]
                     
                     
-                    if dfCohorteIndex.shape[0]>0 :
-                        myIndex = random.randint(0,dfCohorteIndex.shape[0]-1)
-                        print("dfCohorteIndex0Rea:",dfCohorteIndex.index[myIndex])
-                        dfCohorteHosp["dayRea"].iloc[dfCohorteIndex.index[ myIndex]]= row["day"]
+                    if dfTidyIndex.shape[0]>0 :
+                        myIndex = random.randint(0,dfTidyIndex.shape[0]-1)
+                        print("dfTidyIndex0Rea:",dfTidyIndex.index[myIndex])
+                        dfTidyHosp["dayRea"].iloc[dfTidyIndex.index[ myIndex]]= row["day"]
                         break
     
     
@@ -655,17 +627,17 @@ for numSample in range(0,maxSamples) :
                 for i in range(0,int(row['newReaOut'])) :
                     #print("i lits de suite:",i)
                     #select only in rea 
-                    dfCohorteIndex =  dfCohorteHosp.loc [ (dfCohorteHosp["dep"] == row["dep"]) & 
-                                                         (dfCohorteHosp["dayRea"] != datetime(1970, 1, 1, 0, 0, 0)) & 
-                                                         (dfCohorteHosp["dayReaOut"] == datetime(1970, 1, 1, 0, 0, 0)) & 
-                                                         (dfCohorteHosp["dayDc"] == datetime(1970, 1, 1, 0, 0, 0)) & 
-                                                         (dfCohorteHosp["dayRad"] == datetime(1970, 1, 1, 0, 0, 0)) & 
-                                                         (dfCohorteHosp["closed"] == False)  ]
+                    dfTidyIndex =  dfTidyHosp.loc [ (dfTidyHosp["dep"] == row["dep"]) & 
+                                                         (dfTidyHosp["dayRea"] != datetime(1970, 1, 1, 0, 0, 0)) & 
+                                                         (dfTidyHosp["dayReaOut"] == datetime(1970, 1, 1, 0, 0, 0)) & 
+                                                         (dfTidyHosp["dayDc"] == datetime(1970, 1, 1, 0, 0, 0)) & 
+                                                         (dfTidyHosp["dayRad"] == datetime(1970, 1, 1, 0, 0, 0)) & 
+                                                         (dfTidyHosp["closed"] == False)  ]
     
-                    if dfCohorteIndex.shape[0]>0 :
-                        myIndex = random.randint(0,dfCohorteIndex.shape[0]-1)
-                        print("dfCohorteIndex0ReaOut:",dfCohorteIndex.index[myIndex])
-                        dfCohorteHosp["dayReaOut"].iloc[dfCohorteIndex.index[myIndex]]= row["day"]
+                    if dfTidyIndex.shape[0]>0 :
+                        myIndex = random.randint(0,dfTidyIndex.shape[0]-1)
+                        print("dfTidyIndex0ReaOut:",dfTidyIndex.index[myIndex])
+                        dfTidyHosp["dayReaOut"].iloc[dfTidyIndex.index[myIndex]]= row["day"]
                         break
     
     
@@ -675,19 +647,19 @@ for numSample in range(0,maxSamples) :
                  for i in range(0,int(row['newRad'])) :
                      #print("i rad:",i)
                      #select first no rea
-                     dfCohorteIndex =  dfCohorteHosp.loc [ (dfCohorteHosp["dep"] == row["dep"]) & 
-                                                          (dfCohorteHosp["dayRea"] == datetime(1970, 1, 1, 0, 0, 0)) & 
-                                                          (dfCohorteHosp["dayDc"] == datetime(1970, 1, 1, 0, 0, 0)) & 
-                                                          (dfCohorteHosp["dayRad"] == datetime(1970, 1, 1, 0, 0, 0)) & 
-                                                          (dfCohorteHosp["closed"] == False)  ]
+                     dfTidyIndex =  dfTidyHosp.loc [ (dfTidyHosp["dep"] == row["dep"]) & 
+                                                          (dfTidyHosp["dayRea"] == datetime(1970, 1, 1, 0, 0, 0)) & 
+                                                          (dfTidyHosp["dayDc"] == datetime(1970, 1, 1, 0, 0, 0)) & 
+                                                          (dfTidyHosp["dayRad"] == datetime(1970, 1, 1, 0, 0, 0)) & 
+                                                          (dfTidyHosp["closed"] == False)  ]
                      
                      
-                     if dfCohorteIndex.shape[0]>0 :
-                         myIndex = random.randint(0,dfCohorteIndex.shape[0]-1)
+                     if dfTidyIndex.shape[0]>0 :
+                         myIndex = random.randint(0,dfTidyIndex.shape[0]-1)
                          #print("myIndex:", myIndex)
-                         print("dfCohorteIndex0RadNoRea:",dfCohorteIndex.index[myIndex])
-                         dfCohorteHosp["dayRad"].iloc[dfCohorteIndex.index[myIndex]]= row["day"]
-                         dfCohorteHosp["closed"].iloc[dfCohorteIndex.index[myIndex]]= True
+                         print("dfTidyIndex0RadNoRea:",dfTidyIndex.index[myIndex])
+                         dfTidyHosp["dayRad"].iloc[dfTidyIndex.index[myIndex]]= row["day"]
+                         dfTidyHosp["closed"].iloc[dfTidyIndex.index[myIndex]]= True
                          break
     
     
@@ -696,20 +668,20 @@ for numSample in range(0,maxSamples) :
                  for j in range(i,int(row['newRad'])) :
                     #print("i rad rea or not:",i)
                     #select Rea <=  row["day"]
-                    dfCohorteIndex =  dfCohorteHosp.loc [ (dfCohorteHosp["dep"] == row["dep"]) & 
-                                                         (dfCohorteHosp["dayRea"] <=  row["day"] ) &
-                                                         (dfCohorteHosp["dayReaOut"] <=  row["day"] ) &
-                                                         (dfCohorteHosp["dayDc"] == datetime(1970, 1, 1, 0, 0, 0)) & 
-                                                         (dfCohorteHosp["dayRad"] == datetime(1970, 1, 1, 0, 0, 0)) & 
-                                                         (dfCohorteHosp["closed"] == False)  ]
+                    dfTidyIndex =  dfTidyHosp.loc [ (dfTidyHosp["dep"] == row["dep"]) & 
+                                                         (dfTidyHosp["dayRea"] <=  row["day"] ) &
+                                                         (dfTidyHosp["dayReaOut"] <=  row["day"] ) &
+                                                         (dfTidyHosp["dayDc"] == datetime(1970, 1, 1, 0, 0, 0)) & 
+                                                         (dfTidyHosp["dayRad"] == datetime(1970, 1, 1, 0, 0, 0)) & 
+                                                         (dfTidyHosp["closed"] == False)  ]
                     
                     
-                    if dfCohorteIndex.shape[0]>0 :
-                        myIndex = random.randint(0,dfCohorteIndex.shape[0]-1)
+                    if dfTidyIndex.shape[0]>0 :
+                        myIndex = random.randint(0,dfTidyIndex.shape[0]-1)
                         #print("myIndex:", myIndex)
-                        print("dfCohorteIndex0RadRea:",dfCohorteIndex.index[myIndex])
-                        dfCohorteHosp["dayRad"].iloc[dfCohorteIndex.index[myIndex]]= row["day"]
-                        dfCohorteHosp["closed"].iloc[dfCohorteIndex.index[myIndex]]= True
+                        print("dfTidyIndex0RadRea:",dfTidyIndex.index[myIndex])
+                        dfTidyHosp["dayRad"].iloc[dfTidyIndex.index[myIndex]]= row["day"]
+                        dfTidyHosp["closed"].iloc[dfTidyIndex.index[myIndex]]= True
                         break
     
                    
@@ -719,18 +691,18 @@ for numSample in range(0,maxSamples) :
                 for i in range(0,int(row['newDc'])) :
                     #print("i Dc:",i)
                     #select first Rea
-                    dfCohorteIndex =  dfCohorteHosp.loc [ (dfCohorteHosp["dep"] == row["dep"]) & 
-                                                         (dfCohorteHosp["dayRea"] > datetime(1970, 1, 1, 0, 0, 0)) & 
-                                                         (dfCohorteHosp["dayDc"] == datetime(1970, 1, 1, 0, 0, 0)) & 
-                                                         (dfCohorteHosp["dayRad"] == datetime(1970, 1, 1, 0, 0, 0)) & 
-                                                         (dfCohorteHosp["closed"] == False)  ]
+                    dfTidyIndex =  dfTidyHosp.loc [ (dfTidyHosp["dep"] == row["dep"]) & 
+                                                         (dfTidyHosp["dayRea"] > datetime(1970, 1, 1, 0, 0, 0)) & 
+                                                         (dfTidyHosp["dayDc"] == datetime(1970, 1, 1, 0, 0, 0)) & 
+                                                         (dfTidyHosp["dayRad"] == datetime(1970, 1, 1, 0, 0, 0)) & 
+                                                         (dfTidyHosp["closed"] == False)  ]
                     
                     
-                    if dfCohorteIndex.shape[0]>0 :
-                        myIndex = random.randint(0,dfCohorteIndex.shape[0]-1)
-                        print("dfCohorteIndex0DcRea:",dfCohorteIndex.index[myIndex])
-                        dfCohorteHosp["dayDc"].iloc[dfCohorteIndex.index[myIndex]]= row["day"]
-                        dfCohorteHosp["closed"].iloc[dfCohorteIndex.index[myIndex]]= True
+                    if dfTidyIndex.shape[0]>0 :
+                        myIndex = random.randint(0,dfTidyIndex.shape[0]-1)
+                        print("dfTidyIndex0DcRea:",dfTidyIndex.index[myIndex])
+                        dfTidyHosp["dayDc"].iloc[dfTidyIndex.index[myIndex]]= row["day"]
+                        dfTidyHosp["closed"].iloc[dfTidyIndex.index[myIndex]]= True
                         break
     
                 #next select Rea or not
@@ -738,21 +710,21 @@ for numSample in range(0,maxSamples) :
                 for j in range(i,int(row['newDc'])) :
                     #print("i rea:",i)
                     #select not Rea or Not
-                    dfCohorteIndex =  dfCohorteHosp.loc [ (dfCohorteHosp["dep"] == row["dep"]) & 
-                                                         (dfCohorteHosp["dayDc"] == datetime(1970, 1, 1, 0, 0, 0)) & 
-                                                         (dfCohorteHosp["dayRad"] == datetime(1970, 1, 1, 0, 0, 0)) & 
-                                                         (dfCohorteHosp["closed"] == False)  ]
+                    dfTidyIndex =  dfTidyHosp.loc [ (dfTidyHosp["dep"] == row["dep"]) & 
+                                                         (dfTidyHosp["dayDc"] == datetime(1970, 1, 1, 0, 0, 0)) & 
+                                                         (dfTidyHosp["dayRad"] == datetime(1970, 1, 1, 0, 0, 0)) & 
+                                                         (dfTidyHosp["closed"] == False)  ]
                     
                     
-                    if dfCohorteIndex.shape[0]>0 :
-                        myIndex = random.randint(0,dfCohorteIndex.shape[0]-1)
-                        print("dfCohorteIndex0DcAll:",dfCohorteIndex.index[myIndex])
-                        dfCohorteHosp["dayDc"].iloc[dfCohorteIndex.index[myIndex]]= row["day"]
-                        dfCohorteHosp["closed"].iloc[dfCohorteIndex.index[myIndex]]= True
+                    if dfTidyIndex.shape[0]>0 :
+                        myIndex = random.randint(0,dfTidyIndex.shape[0]-1)
+                        print("dfTidyIndex0DcAll:",dfTidyIndex.index[myIndex])
+                        dfTidyHosp["dayDc"].iloc[dfTidyIndex.index[myIndex]]= row["day"]
+                        dfTidyHosp["closed"].iloc[dfTidyIndex.index[myIndex]]= True
                         break
     
     
-    #dfCohorteHosp.dtypes   
+    #dfTidyHosp.dtypes   
       
     #Calculate Days in Rea for this sample
 
@@ -785,33 +757,33 @@ for numSample in range(0,maxSamples) :
         else : return None
     
             
-    dfCohorteHosp["daysInRea"]  = dfCohorteHosp.apply(lambda x: calculateDaysInRea(x["dayRea"], x["dayReaOut"], x["dayDc"], x["dayRad"] ), axis=1)           
+    dfTidyHosp["daysInRea"]  = dfTidyHosp.apply(lambda x: calculateDaysInRea(x["dayRea"], x["dayReaOut"], x["dayDc"], x["dayRad"] ), axis=1)           
     
    
     strNumSample = str(numSample)
-    dfCohorteHosp.reset_index(inplace=True, drop=True) #reset index
+    dfTidyHosp.reset_index(inplace=True, drop=True) #reset index
     #Save the Sample - long to save could be in comments
-    print("Save the Sample Cohorte")
-    dfCohorteHosp.to_excel("CohorteHosp"+str(numSample)+".xlsx", sheet_name='Cohorte', index=True)    
+    print("Save the Sample Tidy")
+    #dfTidyHosp.to_excel("TidyHosp"+str(numSample)+".xlsx", sheet_name='Tidy', index=True)    
     ######## 
     
     
     #################################################################################
     # Calculate number of days in rea by department for this sample
     ###### create meanRea DF (by Department)
-    uniqueDep = dfCohorteHosp["dep"].unique() #
+    uniqueDep = dfTidyHosp["dep"].unique() #
     
     column_names = ["numSample", "dep", "dayInReaNZMean", "countDayInReaNZ", "DaysInReaSampleWMean"]
     dfDepDaysInRea = pd.DataFrame(columns = column_names)
     
     for dep in uniqueDep :
         print("dep:",dep)
-        dfCohorteHospDep =  dfCohorteHosp.loc [ dfCohorteHosp["dep"] == dep ]
-        dayInReaNZMean = dfCohorteHospDep["daysInRea"].mean( skipna = True)
-        countDayInReaNZ = dfCohorteHospDep["daysInRea"].dropna().size  #weight 
+        dfTidyHospDep =  dfTidyHosp.loc [ dfTidyHosp["dep"] == dep ]
+        dayInReaNZMean = dfTidyHospDep["daysInRea"].mean( skipna = True)
+        countDayInReaNZ = dfTidyHospDep["daysInRea"].dropna().size  #weight 
         print("dayInReaNZMean:",dayInReaNZMean)
         print("countDayInReaNZ:",countDayInReaNZ)
-        dfOneDepDaysInRea = pd.DataFrame({"numSample": numSample, "dep" : dep, "dayInReaNZMean" : dayInReaNZMean, "countDayInReaNZ" : countDayInReaNZ}, index=[0]) #New work cohorte
+        dfOneDepDaysInRea = pd.DataFrame({"numSample": numSample, "dep" : dep, "dayInReaNZMean" : dayInReaNZMean, "countDayInReaNZ" : countDayInReaNZ}, index=[0]) #New work Tidy
         
         dfDepDaysInRea = pd.concat([dfDepDaysInRea,dfOneDepDaysInRea])  #new rows
     
@@ -819,8 +791,9 @@ for numSample in range(0,maxSamples) :
 
     
     dfDepDaysInRea.reset_index(inplace=True, drop=True) 
-    print("Save the Sample Days in Rea by Day")
-    dfDepDaysInRea.to_excel("dfDepDaysInRea"+str(numSample)+".xlsx", sheet_name='Means', index=True)    
+    print("Save one Sample Days in Rea by Day")
+    #Save one sample file if needed
+    #dfDepDaysInRea.to_excel("dfDepDaysInRea"+str(numSample)+".xlsx", sheet_name='Means', index=True)    
     #Concat data in all samples data 
     dfAllDepDaysInRea = pd.concat([dfAllDepDaysInRea,dfDepDaysInRea]) #new rows
     
@@ -836,7 +809,11 @@ dfAllDepDaysInRea.to_excel("dfAllDepDaysInRea.xlsx", sheet_name='Means', index=T
 # Global mean of samples by dep
 ####################################################################################################
 #Resort by dep
-dfAllDepDaysInRea.sort_values(by=['dep'], ascending=[True],  inplace=True)
+dfAllDepDaysInRea.dtypes
+
+dfAllDepDaysInRea['dep']= dfAllDepDaysInRea['dep'].astype(str)  #force dep to string
+dfAllDepDaysInRea['dep'] = dfAllDepDaysInRea['dep'].str.strip() #strip white spaces
+dfAllDepDaysInRea.sort_values(by='dep', ascending=True,  inplace=True)
 #reindex
 dfAllDepDaysInRea.reset_index(inplace=True, drop=True) 
 
