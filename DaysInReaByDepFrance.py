@@ -27,10 +27,15 @@ hospFile = "donnees-hospitalieres-covid19-2020-09-14-19h00.csv"
 # i.e sursaud-corona-quot-dep-YYYY-MM-DD-19h15.csv
 ###############################################################
 #Import file with necessary variables
+
+
+dateparse = lambda x: pd.to_datetime(x, format='%d/%m/%Y')
+
+
 df = pd.read_csv(sursaudFile, sep=";" ,  
                          usecols= ["dep","date_de_passage","sursaud_cl_age_corona", "nbre_hospit_corona"],
                          dtype={"dep": str},  #force dep to string
-                         parse_dates= ["date_de_passage"])
+                         parse_dates= ["date_de_passage"], date_parser=dateparse)
 df.dtypes
 
 df.rename(columns={"date_de_passage": "day" }, inplace=True)
@@ -73,7 +78,7 @@ for index, row in dfUrgences.iterrows():
     print("previousCumul:", previousCumul)
     
 #Save Urgences data if needed
-#dfUrgences.to_excel("Urgences.xlsx", sheet_name='Urgences', index=True)    
+dfUrgences.to_excel("Urgences.xlsx", sheet_name='Urgences', index=True)    
 dfUrgences.dtypes
 
 
@@ -83,10 +88,13 @@ dfUrgences.dtypes
 # Read Hospitalizations  file :
 # i.e donnnees-hospitalieres-covid19-YYYY-MM-DD-19h00.csv
 ###############################################################
+
+
+dateparse = lambda x: pd.to_datetime(x, format='%d/%m/%Y')
 df = pd.read_csv(hospFile, sep=";" ,  
                          usecols= ["dep","sexe", "jour","hosp", "rea", "rad", "dc"],
                          dtype={"dep": str},
-                         parse_dates= ["jour"])
+                         parse_dates= ["jour"], date_parser=dateparse)
 df.dtypes
 
 df.rename(columns={"jour": "day" }, inplace=True)
@@ -107,6 +115,7 @@ dfHospitalizations.reset_index(inplace=True, drop=True)  #reset index
 
 #hospCumul = max previous value or hosp + rad + dc
 dfHospitalizations["hospCumul"]=0.0
+previousDep = "00"
 previousCumul=0.0
 
 for index, row in dfHospitalizations.iterrows():
@@ -125,7 +134,7 @@ for index, row in dfHospitalizations.iterrows():
     print("previousCumul:", previousCumul)
 
 #save hospitalizations if needed
-#dfHospitalizations.to_excel("Hospitalizations.xlsx", sheet_name='Hospitalizations.xlsx', index=True)  
+dfHospitalizations.to_excel("Hospitalizations.xlsx", sheet_name='Hospitalizations', index=True)  
 dfHospitalizations.dtypes
 
 
@@ -142,12 +151,22 @@ dfUrgHosp["rea"] = dfUrgHosp["rea"].fillna(0)  #remove NaN
 dfUrgHosp["rad"] = dfUrgHosp["rad"].fillna(0)  #remove NaN 
 dfUrgHosp["dc"] = dfUrgHosp["dc"].fillna(0)  #remove NaN 
 
+#Save dfUrgHosp start state
+#save hospitalizations if needed
+dfUrgHosp.to_excel("dfUrgHospStartState.xlsx", sheet_name='UrgHospStartState', index=True)  
+
+
 #Resort it  day descending
 dfUrgHosp.sort_values(by=['dep', 'day'], ascending=[True, False],  inplace=True)
 #Reindex
 dfUrgHosp.reset_index(inplace=True, drop=True)  #reset index
 
 
+
+
+###########################################################
+# Calculate hospCumul vs cumul_hospit_corona factor
+###########################################################
 
 #usefull function
 def nonZeroYbyX(x,y):
@@ -156,12 +175,6 @@ def nonZeroYbyX(x,y):
     else:
         return 0
 
-
-
-
-###########################################################
-# Calculate hospCumul vs cumul_hospit_corona factor
-###########################################################
 
 dfUrgHosp['hospCumul_cumul_hosp_corona_factor'] = 0.0
 valuesForMean = []
