@@ -151,22 +151,20 @@ dfUrgHosp["rea"] = dfUrgHosp["rea"].fillna(0)  #remove NaN
 dfUrgHosp["rad"] = dfUrgHosp["rad"].fillna(0)  #remove NaN 
 dfUrgHosp["dc"] = dfUrgHosp["dc"].fillna(0)  #remove NaN 
 
-#Save dfUrgHosp start state
-#save hospitalizations if needed
-dfUrgHosp.to_excel("dfUrgHospStartState.xlsx", sheet_name='UrgHospStartState', index=True)  
-
-
-#Resort it  day descending
-dfUrgHosp.sort_values(by=['dep', 'day'], ascending=[True, False],  inplace=True)
-#Reindex
-dfUrgHosp.reset_index(inplace=True, drop=True)  #reset index
-
+#Save dfUrgHosp sta rt state
+#save if needed
+#dfUrgHosp.to_excel("dfUrgHospStartState.xlsx", sheet_name='UrgHospStartState', index=True)  
 
 
 
 ###########################################################
 # Calculate hospCumul vs cumul_hospit_corona factor
 ###########################################################
+
+#Resort it  day descending
+dfUrgHosp.sort_values(by=['dep', 'day'], ascending=[True, False],  inplace=True)
+#Reindex
+dfUrgHosp.reset_index(inplace=True, drop=True)  #reset index
 
 #usefull function
 def nonZeroYbyX(x,y):
@@ -564,7 +562,7 @@ dfNewHosp = pd.read_excel("dfUrgHosp.xlsx", sheet_name='UrgHosp', usecols=["dep"
 dfNewHosp.dtypes
 
 
-maxSamples = 100 #number of samples 100 is very good, 20 is enough
+maxSamples = 20 #number of samples 100 is very good, 20 is enough
 
 column_names = ["numSample", "dep", "dayInReaNZMean", "countDayInReaNZ", "DaysInReaSampleWMean"]
 dfAllDepDaysInRea = pd.DataFrame(columns = column_names)
@@ -777,7 +775,7 @@ for numSample in range(0,maxSamples) :
     dfTidyHosp.reset_index(inplace=True, drop=True) #reset index
     #Save the Sample - long to save could be in comments
     print("Save the Sample Tidy")
-    #dfTidyHosp.to_excel("TidyHosp"+str(numSample)+".xlsx", sheet_name='Tidy', index=True)    
+    dfTidyHosp.to_excel("TidyHosp"+str(numSample)+".xlsx", sheet_name='Tidy', index=True)    
     ######## 
     
     
@@ -798,15 +796,16 @@ for numSample in range(0,maxSamples) :
         print("countDayInReaNZ:",countDayInReaNZ)
         dfOneDepDaysInRea = pd.DataFrame({"numSample": numSample, "dep" : dep, "dayInReaNZMean" : dayInReaNZMean, "countDayInReaNZ" : countDayInReaNZ}, index=[0]) #New work Tidy
         
-        dfDepDaysInRea = pd.concat([dfDepDaysInRea,dfOneDepDaysInRea])  #new rows
-    
+        dfDepDaysInRea = pd.concat([dfDepDaysInRea,dfOneDepDaysInRea])  #new rows    
+        
+    #calculate weighted average
     dfDepDaysInRea["DaysInReaSampleWMean"] = np.average(a=dfDepDaysInRea["dayInReaNZMean"],weights=dfDepDaysInRea["countDayInReaNZ"] )  
 
     
     dfDepDaysInRea.reset_index(inplace=True, drop=True) 
     print("Save one Sample Days in Rea by Day")
     #Save one sample file if needed
-    #dfDepDaysInRea.to_excel("dfDepDaysInRea"+str(numSample)+".xlsx", sheet_name='Means', index=True)    
+    dfDepDaysInRea.to_excel("dfDepDaysInRea"+str(numSample)+".xlsx", sheet_name='Means', index=True)    
     #Concat data in all samples data 
     dfAllDepDaysInRea = pd.concat([dfAllDepDaysInRea,dfDepDaysInRea]) #new rows
     
@@ -840,15 +839,16 @@ for dep in uniqueDep :
     print("dep:",dep)
     #create one dataframe for one dep
     daysInReaByDep = 0.0  #initialize value
-    #dfOneDaysInReaByDep = pd.DataFrame(columns = column_names) 
+    dfOneDaysInReaByDep = pd.DataFrame(columns = column_names) 
     #select data for the current dep
     dfOneAllDepDaysInRea =  dfAllDepDaysInRea.loc [ dfAllDepDaysInRea["dep"] == dep ]
     
     #calculate average for this dep
     daysInReaByDep = np.average(a=dfOneAllDepDaysInRea["dayInReaNZMean"],weights=dfOneAllDepDaysInRea["countDayInReaNZ"] )
-    print("average:",dfOneDaysInReaByDep["daysInReaByDep"] )
+
     
     dfOneDaysInReaByDep = pd.DataFrame({"dep": dep,  "daysInReaByDep" : daysInReaByDep}, index=[0]) #New work df
+    print("average:",dfOneDaysInReaByDep["daysInReaByDep"] )
     #concat in all dep dataframe        
     dfDaysInReaByDep = pd.concat([dfDaysInReaByDep,dfOneDaysInReaByDep])  #new rows
                          
